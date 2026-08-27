@@ -1,5 +1,5 @@
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
-import { Building2, LockKeyhole, Mail } from "lucide-react-native";
+import { Building2 } from "lucide-react-native";
 import { useMemo, useState } from "react";
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from "react-native";
 import { Button, Card, TextField } from "../components/ui";
@@ -132,16 +132,6 @@ export function AuthScreen({ navigation }: Props) {
             {message ? <Text style={styles.message}>{message}</Text> : null}
           </Card>
 
-          <Card style={styles.security}>
-            <View style={styles.securityRow}>
-              <Mail size={18} color={colors.ink[600]} />
-              <Text style={styles.securityText}>Email-based account access</Text>
-            </View>
-            <View style={styles.securityRow}>
-              <LockKeyhole size={18} color={colors.ink[600]} />
-              <Text style={styles.securityText}>Private data stays isolated per signed-in owner</Text>
-            </View>
-          </Card>
         </ScrollView>
 
         <View style={styles.footer}>
@@ -189,9 +179,6 @@ const styles = StyleSheet.create({
   form: { gap: spacing[4] },
   section: { ...typography.sectionTitle, color: colors.ink[900] },
   message: { ...typography.caption, color: colors.brand[700] },
-  security: { gap: spacing[3] },
-  securityRow: { flexDirection: "row", alignItems: "center", gap: spacing[3] },
-  securityText: { ...typography.body, color: colors.ink[700], flex: 1 },
   footer: {
     paddingHorizontal: spacing[4],
     paddingTop: spacing[3],

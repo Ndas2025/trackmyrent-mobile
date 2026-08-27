@@ -1,5 +1,5 @@
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
-import { Alert } from "react-native";
+import { Alert, useWindowDimensions } from "react-native";
 import { useState } from "react";
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from "react-native";
 import { Button, Card, TextField } from "../components/ui";
@@ -14,6 +14,8 @@ type ExpenseRecurrence = Expense["recurrence"];
 const recurrenceOptions: ExpenseRecurrence[] = ["Monthly", "This month"];
 
 export function AddExpenseScreen({ navigation }: Props) {
+  const { width } = useWindowDimensions();
+  const isCompact = width < 380;
   const { addExpense, errorMessage, clearError } = useFinance();
   const [form, setForm] = useState<{ title: string; category: string; amount: string; recurrence: ExpenseRecurrence }>({
     title: "",
@@ -66,7 +68,7 @@ export function AddExpenseScreen({ navigation }: Props) {
 
             <View style={styles.segmentBlock}>
               <Text style={styles.segmentLabel}>Recurrence</Text>
-              <View style={styles.segmentRow}>
+              <View style={[styles.segmentRow, isCompact && styles.segmentRowCompact]}>
                 {recurrenceOptions.map((option) => {
                   const active = option === form.recurrence;
                   return (
@@ -104,6 +106,7 @@ const styles = StyleSheet.create({
   segmentBlock: { gap: spacing[2] },
   segmentLabel: { ...typography.caption, color: colors.ink[500], textTransform: "uppercase" },
   segmentRow: { flexDirection: "row", gap: spacing[2] },
+  segmentRowCompact: { flexDirection: "column" },
   segmentButton: { flex: 1, minHeight: 44 },
   segmentButtonActive: { borderColor: colors.brand[100] },
   footer: {

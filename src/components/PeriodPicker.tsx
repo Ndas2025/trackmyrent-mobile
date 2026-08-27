@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Modal, Pressable, StyleSheet, Text, View } from "react-native";
+import { Modal, Pressable, StyleSheet, Text, useWindowDimensions, View } from "react-native";
 import { Button, DropdownField } from "./ui";
 import { colors, spacing, typography } from "../design";
 
@@ -17,6 +17,8 @@ type Props = {
 type PickerMode = "month" | "year" | null;
 
 export function PeriodPicker({ monthLabel, yearLabel, monthOptions, yearOptions, monthIndex, year, onMonthChange, onYearChange }: Props) {
+  const { width } = useWindowDimensions();
+  const isCompact = width < 380;
   const [pickerMode, setPickerMode] = useState<PickerMode>(null);
   const [draftMonth, setDraftMonth] = useState(monthIndex);
   const [draftYear, setDraftYear] = useState(year);
@@ -41,7 +43,7 @@ export function PeriodPicker({ monthLabel, yearLabel, monthOptions, yearOptions,
 
   return (
     <>
-      <View style={styles.row}>
+      <View style={[styles.row, isCompact && styles.rowCompact]}>
         <DropdownField label="Month" value={monthLabel} onPress={() => openPicker("month")} />
         <DropdownField label="Year" value={yearLabel} onPress={() => openPicker("year")} />
       </View>
@@ -70,7 +72,7 @@ export function PeriodPicker({ monthLabel, yearLabel, monthOptions, yearOptions,
                 })}
               </View>
             ) : (
-              <View style={styles.yearRow}>
+              <View style={[styles.yearRow, isCompact && styles.yearRowCompact]}>
                 {yearOptions.map((option) => {
                   const active = option === draftYear;
                   return (
@@ -87,13 +89,13 @@ export function PeriodPicker({ monthLabel, yearLabel, monthOptions, yearOptions,
               </View>
             )}
 
-            <View style={styles.actions}>
-              <View style={styles.flex}>
+            <View style={[styles.actions, isCompact && styles.actionsCompact]}>
+              <View style={[styles.flex, isCompact && styles.fullWidth]}>
                 <Button variant="secondary" fullWidth onPress={() => setPickerMode(null)}>
                   Cancel
                 </Button>
               </View>
-              <View style={styles.flex}>
+              <View style={[styles.flex, isCompact && styles.fullWidth]}>
                 <Button fullWidth onPress={applyPicker}>
                   Apply
                 </Button>
@@ -110,6 +112,9 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: "row",
     gap: spacing[3],
+  },
+  rowCompact: {
+    flexDirection: "column"
   },
   backdrop: {
     flex: 1,
@@ -130,6 +135,7 @@ const styles = StyleSheet.create({
   title: { fontSize: 22, lineHeight: 28, fontWeight: "800", color: colors.ink[900] },
   grid: { flexDirection: "row", flexWrap: "wrap", gap: spacing[2] },
   yearRow: { flexDirection: "row", gap: spacing[2] },
+  yearRowCompact: { flexWrap: "wrap" },
   chip: {
     width: "31.5%",
     minHeight: 48,
@@ -155,5 +161,7 @@ const styles = StyleSheet.create({
   chipText: { ...typography.label, color: colors.ink[600] },
   chipTextActive: { color: colors.ink[900], fontWeight: "800" },
   actions: { flexDirection: "row", gap: spacing[2] },
-  flex: { flex: 1 }
+  actionsCompact: { flexDirection: "column" },
+  flex: { flex: 1 },
+  fullWidth: { flexBasis: "100%" }
 });

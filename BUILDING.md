@@ -9,10 +9,25 @@
 ## Recommended order
 
 1. Finish app changes and run type-checking.
-2. Run a preview build for internal testing.
-3. Complete physical-device QA.
-4. Fix release blockers.
-5. Run production builds only after QA passes.
+2. Run a local web preview while iterating on UI changes.
+3. Run a preview build for internal testing.
+4. Complete physical-device QA.
+5. Fix release blockers.
+6. Run production builds only after QA passes.
+
+## Local web preview
+
+Use this when you want a quick browser-based preview without depending on Metro's file watcher limits.
+
+1. From the app folder, run `pnpm local:preview:web`.
+2. Open `http://127.0.0.1:4173` in your browser.
+3. After each UI change, stop the command and run it again to refresh the exported preview.
+
+### Notes
+
+- This preview is meant for UI review and responsive checks.
+- It avoids the common macOS `EMFILE` watcher error that blocks `expo start --web` on machines without Watchman.
+- For device testing or hot reload, use the normal Expo commands after installing Watchman.
 
 ## Fast preview build checklist
 

@@ -9,6 +9,7 @@
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
+    "local:preview:web": "sh ./scripts/local-preview-web.sh",
     "export:android": "expo export --platform android --output-dir ../output/android-export",
     "export:ios": "expo export --platform ios --output-dir ../output/ios-export",
     "preview:build": "sh ./scripts/eas-preview-build.sh",

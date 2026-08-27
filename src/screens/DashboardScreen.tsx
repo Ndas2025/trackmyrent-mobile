@@ -2,7 +2,7 @@ import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { CalendarRange, ChevronRight, Users, WalletCards } from "lucide-react-native";
 import { useMemo, useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from "react-native";
 import { AppHeader } from "../components/AppHeader";
 import { PeriodPicker } from "../components/PeriodPicker";
 import { SyncStatusCard } from "../components/SyncStatusCard";
@@ -30,6 +30,8 @@ const monthNames = [
 const memberFilters = ["All", "Paid", "Unpaid"] as const;
 
 export function DashboardScreen() {
+  const { width } = useWindowDimensions();
+  const isCompact = width < 380;
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { members, markPaid, status, errorMessage } = useMembers();
   const now = new Date();
@@ -51,7 +53,7 @@ export function DashboardScreen() {
     <View style={styles.screen}>
       <AppHeader onPremiumPress={() => navigation.navigate("Premium")} onProfilePress={() => navigation.navigate("Profile")} />
       <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
-        <View style={styles.pageHero}>
+        <View style={[styles.pageHero, isCompact && styles.pageHeroCompact]}>
           <Text style={styles.pageTitle}>Dashboard</Text>
           <Button size="sm" onPress={() => navigation.navigate("AddMember")}>
             Add member
@@ -71,7 +73,7 @@ export function DashboardScreen() {
           />
         </View>
 
-        <View style={styles.metricsRow}>
+        <View style={[styles.metricsRow, isCompact && styles.stackRow]}>
           <MetricCard icon={Users} label="All members" value={`${periodMembers.length}`} />
           <MetricCard icon={CalendarRange} label="Total collected" value={formatCurrency(collected)} detail={`of ${formatCurrency(totalTarget)}`} />
         </View>
@@ -80,7 +82,7 @@ export function DashboardScreen() {
 
         <Card style={styles.quickActions}>
           <Text style={styles.quickActionsLabel}>Quick actions</Text>
-          <View style={styles.quickActionsRow}>
+          <View style={[styles.quickActionsRow, isCompact && styles.stackRow]}>
             <Button fullWidth variant="secondary" onPress={() => navigation.navigate("Members")} style={styles.quickButton}>
               View members
             </Button>
@@ -95,7 +97,7 @@ export function DashboardScreen() {
             <Text style={styles.rosterTitle}>{periodMembers.length} Members</Text>
           </View>
 
-          <View style={styles.tabRow}>
+          <View style={[styles.tabRow, isCompact && styles.tabRowCompact]}>
             {memberFilters.map((filter) => {
               const count = filter === "All" ? periodMembers.length : filter === "Paid" ? paidMembers.length : unpaidMembers.length;
               const active = filter === selectedFilter;
@@ -167,7 +169,7 @@ function RosterRow({
 }) {
   const isPaid = member.status === "Paid";
   return (
-    <Pressable onPress={onOpen} style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}>
+    <Pressable onPress={onOpen} style={({ pressed }) => [styles.row, pressed && styles.rowPressed, isPaid ? null : null]}>
       <View style={styles.rowLeft}>
         <View style={[styles.avatar, isPaid ? styles.avatarPaid : styles.avatarUnpaid]}>
           <Text style={[styles.avatarText, !isPaid && styles.avatarTextUnpaid]}>{member.name.split(" ").map((part) => part[0]).join("")}</Text>
@@ -184,7 +186,7 @@ function RosterRow({
       </View>
 
       <View style={styles.rowRight}>
-        <View style={styles.rowActions}>
+        <View style={[styles.rowActions, styles.rowActionsCompact]}>
           {!isPaid ? (
             <Button size="sm" variant="secondary" onPress={onMarkPaid}>
               Mark paid
@@ -211,10 +213,14 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     gap: spacing[3]
   },
+  pageHeroCompact: {
+    alignItems: "stretch"
+  },
   pageTitle: { fontSize: 18, lineHeight: 24, fontWeight: "800", color: colors.ink[900] },
   periodPickerWrap: { paddingHorizontal: spacing[4], paddingTop: spacing[6] },
   filtersRow: { flexDirection: "row", gap: spacing[3], paddingHorizontal: spacing[4], paddingTop: spacing[3] },
   metricsRow: { flexDirection: "row", gap: spacing[3], paddingHorizontal: spacing[4], paddingTop: spacing[4] },
+  stackRow: { flexDirection: "column" },
   metricCard: { flex: 1, gap: spacing[2], minHeight: 136 },
   statusWrap: { marginHorizontal: spacing[4], marginTop: spacing[4] },
   quickActions: { gap: spacing[3], marginHorizontal: spacing[4], marginTop: spacing[4] },
@@ -244,6 +250,9 @@ const styles = StyleSheet.create({
     gap: spacing[2],
     paddingHorizontal: spacing[4],
     paddingVertical: spacing[4]
+  },
+  tabRowCompact: {
+    flexWrap: "wrap"
   },
   filterTab: {
     flex: 1,
@@ -301,6 +310,7 @@ const styles = StyleSheet.create({
   statusRow: { flexDirection: "row", alignItems: "center", gap: spacing[2], flexWrap: "wrap" },
   rowRight: { alignItems: "flex-end", paddingTop: 1 },
   rowActions: { flexDirection: "row", alignItems: "center", gap: spacing[2] },
+  rowActionsCompact: { flexWrap: "wrap", justifyContent: "flex-end" },
   arrowButton: {
     width: 40,
     height: 40,

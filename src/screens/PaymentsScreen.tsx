@@ -1,6 +1,6 @@
 import { CheckCircle2, Clock3, Plus, WalletCards } from "lucide-react-native";
 import { useMemo, useState } from "react";
-import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Alert, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from "react-native";
 import { Badge, Button, Card, SummaryCard } from "../components/ui";
 import { PeriodPicker } from "../components/PeriodPicker";
 import { SyncStatusCard } from "../components/SyncStatusCard";
@@ -13,6 +13,8 @@ import { isDateInMonthYear, monthNames } from "../utils/date";
 const paymentMethods = ["UPI", "Bank", "Cash"] as const;
 
 export function PaymentsScreen() {
+  const { width } = useWindowDimensions();
+  const isCompact = width < 380;
   const { members, markPaid, status: memberStatus, errorMessage: memberError, clearError: clearMemberError } = useMembers();
   const { payments, addPayment, status: financeStatus, errorMessage: financeError, clearError: clearFinanceError } = useFinance();
   const now = new Date();
@@ -47,7 +49,7 @@ export function PaymentsScreen() {
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
       <Card style={styles.hero}>
-        <View style={styles.heroTop}>
+        <View style={[styles.heroTop, isCompact && styles.heroTopCompact]}>
           <View style={styles.heroText}>
             <Text style={styles.eyebrow}>PAYMENT LOG</Text>
             <Text style={styles.title}>Payments</Text>
@@ -55,7 +57,7 @@ export function PaymentsScreen() {
           </View>
           <WalletCards size={24} color={colors.brand[600]} />
         </View>
-        <View style={styles.grid}>
+        <View style={[styles.grid, isCompact && styles.stackRow]}>
           <SummaryCard label="Collected" value={formatCurrency(collected)} detail={`${monthNames[selectedMonth]} ${selectedYear}`} />
           <SummaryCard label="Pending" value={formatCurrency(pending)} detail={`${outstanding.length} members`} accent="amber" />
         </View>
@@ -81,7 +83,7 @@ export function PaymentsScreen() {
 
       {recording && (
         <Card style={styles.form}>
-          <View style={styles.sectionHead}>
+          <View style={[styles.sectionHead, isCompact && styles.sectionHeadCompact]}>
             <View>
               <Text style={styles.section}>Select a member</Text>
               <Text style={styles.muted}>Mark the rent as paid and store the receipt instantly.</Text>
@@ -109,7 +111,7 @@ export function PaymentsScreen() {
                 <Text style={styles.name}>{member.name}</Text>
                 <Text style={styles.muted}>{member.unit}</Text>
               </View>
-              <View style={styles.trailing}>
+              <View style={[styles.trailing, isCompact && styles.trailingCompact]}>
                 <Text style={styles.amount}>{recordingPaymentId === member.id ? "Saving..." : formatCurrency(member.balance)}</Text>
                 <Plus size={18} color={colors.brand[700]} />
               </View>
@@ -124,13 +126,13 @@ export function PaymentsScreen() {
         {periodPayments.map((payment) => {
           const member = members.find((m) => m.id === payment.memberId);
           return (
-            <Card key={payment.id} style={styles.payment}>
+            <Card key={payment.id} style={[styles.payment, isCompact && styles.paymentCompact]}>
               <CheckCircle2 size={22} color={colors.status.paid} />
               <View style={styles.flex}>
                 <Text style={styles.name}>{member?.name ?? "Member"}</Text>
                 <Text style={styles.muted}>{payment.date} · {payment.method}</Text>
               </View>
-              <View style={styles.trailing}>
+              <View style={[styles.trailing, isCompact && styles.trailingCompact]}>
                 <Text style={styles.amount}>{formatCurrency(payment.amount)}</Text>
                 <Badge label="Paid" tone="paid" />
               </View>
@@ -148,13 +150,16 @@ const styles = StyleSheet.create({
   content: { padding: spacing[4], gap: spacing[4], paddingBottom: 128 },
   hero: { gap: spacing[4] },
   heroTop: { flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between", gap: spacing[3] },
+  heroTopCompact: { alignItems: "stretch" },
   heroText: { flex: 1, gap: spacing[2] },
   eyebrow: { ...typography.caption, color: colors.brand[700] },
   title: { ...typography.title, color: colors.ink[900] },
   subtitle: { ...typography.body, color: colors.ink[600] },
   grid: { flexDirection: "row", gap: spacing[3], flexWrap: "wrap" },
+  stackRow: { flexDirection: "column" },
   form: { gap: spacing[2] },
   sectionHead: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", gap: spacing[3] },
+  sectionHeadCompact: { alignItems: "stretch" },
   section: { ...typography.sectionTitle, color: colors.ink[900] },
   methodRow: { flexDirection: "row", gap: spacing[2], flexWrap: "wrap", paddingTop: spacing[2] },
   methodButton: { flex: 1, minHeight: 40 },
@@ -165,7 +170,9 @@ const styles = StyleSheet.create({
   muted: { ...typography.caption, color: colors.ink[500] },
   amount: { ...typography.label, color: colors.ink[900] },
   payment: { flexDirection: "row", alignItems: "center", gap: spacing[3] },
+  paymentCompact: { alignItems: "flex-start" },
   trailing: { alignItems: "flex-end", gap: spacing[1] },
+  trailingCompact: { marginLeft: "auto" },
   list: { gap: spacing[3] },
   heroChip: { borderRadius: radii.pill }
 });

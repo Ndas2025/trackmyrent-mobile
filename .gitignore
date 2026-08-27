@@ -1,5 +1,7 @@
 node_modules/
+.DS_Store
 .expo/
+.expo-home/
 .expo-preview-home/
 dist/
 web-build/
