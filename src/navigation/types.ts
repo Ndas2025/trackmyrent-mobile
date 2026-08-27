@@ -1,17 +1,25 @@
+import type { NavigatorScreenParams } from "@react-navigation/native";
+
 export type RootStackParamList = {
-  MainTabs: undefined;
-  Plans: undefined;
-  Expenses: undefined;
-  Settings: undefined;
-  DesignSystem: undefined;
+  Splash: undefined;
+  Intro: undefined;
+  AccountSetup: undefined;
+  CategorySelect: undefined;
+  SubscriptionSelect: undefined;
+  MainTabs: NavigatorScreenParams<MainTabParamList> | undefined;
   AddMember: undefined;
+  AddExpense: undefined;
+  AddPlan: undefined;
+  PlanDetail: { planId: string };
+  Premium: undefined;
   MemberDetail: { memberId: string };
+  ExpenseDetail: { expenseId: string };
+  Profile: undefined;
 };
 
 export type MainTabParamList = {
   Dashboard: undefined;
-  Members: undefined;
-  Payments: undefined;
-  Reports: undefined;
-  More: undefined;
+  Plan: undefined;
+  Expense: undefined;
+  Report: undefined;
 };

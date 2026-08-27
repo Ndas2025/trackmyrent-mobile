@@ -65,8 +65,8 @@ export const typography = {
     fontWeight: "800" as const
   },
   sectionTitle: {
-    fontSize: 18,
-    lineHeight: 24,
+    fontSize: 14,
+    lineHeight: 20,
     fontWeight: "700" as const
   },
   body: {

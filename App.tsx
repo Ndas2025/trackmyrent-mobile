@@ -5,6 +5,7 @@ import { AppNavigator } from "./src/navigation/AppNavigator";
 import { colors } from "./src/design";
 import { MembersProvider } from "./src/data/MembersContext";
 import { FinanceProvider } from "./src/data/FinanceContext";
+import { OnboardingProvider } from "./src/data/OnboardingContext";
 
 const theme = {
   dark: false,
@@ -27,14 +28,16 @@ const theme = {
 export default function App() {
   return (
     <SafeAreaProvider>
-      <MembersProvider>
-        <FinanceProvider>
-          <NavigationContainer theme={theme}>
-            <AppNavigator />
-            <StatusBar style="dark" />
-          </NavigationContainer>
-        </FinanceProvider>
-      </MembersProvider>
+      <OnboardingProvider>
+        <MembersProvider>
+          <FinanceProvider>
+            <NavigationContainer theme={theme}>
+              <AppNavigator />
+              <StatusBar style="dark" />
+            </NavigationContainer>
+          </FinanceProvider>
+        </MembersProvider>
+      </OnboardingProvider>
     </SafeAreaProvider>
   );
 }

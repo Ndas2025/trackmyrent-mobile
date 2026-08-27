@@ -1,5 +1,6 @@
 node_modules/
 .expo/
+.expo-preview-home/
 dist/
 web-build/
 *.jks

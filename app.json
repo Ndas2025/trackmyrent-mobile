@@ -10,15 +10,16 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.trackmyrent.app",
-      "buildNumber": "1"
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "package": "com.trackmyrent.app",
-      "versionCode": 1
+      "package": "com.trackmyrent.app"
     },
     "web": {
       "favicon": "./assets/favicon.png"

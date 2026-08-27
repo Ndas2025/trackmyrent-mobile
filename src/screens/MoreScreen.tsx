@@ -1,15 +1,16 @@
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useNavigation } from "@react-navigation/native";
-import { ChevronRight, CircleDollarSign, Palette, Settings, WalletCards } from "lucide-react-native";
+import { ChevronRight, CircleDollarSign, LayoutDashboard, WalletCards } from "lucide-react-native";
 import { Pressable, StyleSheet, Text, View } from "react-native";
-import { colors, spacing, typography } from "../design";
+import { Card } from "../components/ui";
+import { colors, radii, spacing, typography } from "../design";
 import type { RootStackParamList } from "../navigation/types";
 
 const menuItems = [
-  { label: "Plans", route: "Plans" as const, icon: WalletCards },
-  { label: "Expenses", route: "Expenses" as const, icon: CircleDollarSign },
-  { label: "Settings", route: "Settings" as const, icon: Settings },
-  { label: "Design system", route: "DesignSystem" as const, icon: Palette }
+  { label: "Dashboard", screen: "Dashboard" as const, icon: LayoutDashboard },
+  { label: "Plan", screen: "Plan" as const, icon: WalletCards },
+  { label: "Expense", screen: "Expense" as const, icon: CircleDollarSign },
+  { label: "Report", screen: "Report" as const, icon: LayoutDashboard }
 ];
 
 export function MoreScreen() {
@@ -17,21 +18,31 @@ export function MoreScreen() {
 
   return (
     <View style={styles.screen}>
-      <Text style={styles.heading}>Manage</Text>
+      <Card style={styles.hero}>
+        <Text style={styles.eyebrow}>TOOLS</Text>
+        <Text style={styles.title}>More</Text>
+        <Text style={styles.subtitle}>Open the supporting workflows that keep the rent tracker running smoothly.</Text>
+      </Card>
+
       <View style={styles.list}>
-        {menuItems.map(({ label, route, icon: Icon }, index) => (
+        {menuItems.map(({ label, screen, icon: Icon }, index) => (
           <Pressable
             accessibilityRole="button"
-            key={route}
-            onPress={() => navigation.navigate(route)}
+            key={label}
+            onPress={() => navigation.navigate("MainTabs", { screen })}
             style={({ pressed }) => [
               styles.row,
               index < menuItems.length - 1 && styles.divider,
               pressed && styles.pressed
             ]}
           >
-            <Icon color={colors.brand[700]} size={21} />
-            <Text style={styles.label}>{label}</Text>
+            <View style={styles.iconWrap}>
+              <Icon color={colors.brand[700]} size={21} />
+            </View>
+            <View style={styles.rowText}>
+              <Text style={styles.label}>{label}</Text>
+              <Text style={styles.detail}>Open {label.toLowerCase()}</Text>
+            </View>
             <ChevronRight color={colors.ink[300]} size={20} />
           </Pressable>
         ))}
@@ -41,11 +52,17 @@ export function MoreScreen() {
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: colors.surface.app, padding: spacing[4] },
-  heading: { ...typography.label, color: colors.ink[500], marginBottom: spacing[3] },
-  list: { backgroundColor: colors.white, borderColor: colors.surface.line, borderWidth: 1 },
-  row: { minHeight: 56, flexDirection: "row", alignItems: "center", gap: spacing[3], paddingHorizontal: spacing[4] },
+  screen: { flex: 1, backgroundColor: colors.surface.app, padding: spacing[4], gap: spacing[4] },
+  hero: { gap: spacing[2] },
+  eyebrow: { ...typography.caption, color: colors.brand[700] },
+  title: { ...typography.title, color: colors.ink[900] },
+  subtitle: { ...typography.body, color: colors.ink[600] },
+  list: { backgroundColor: colors.white, borderColor: colors.surface.line, borderWidth: 1, borderRadius: radii.md, overflow: "hidden" },
+  row: { minHeight: 64, flexDirection: "row", alignItems: "center", gap: spacing[3], paddingHorizontal: spacing[4] },
   divider: { borderBottomColor: colors.surface.line, borderBottomWidth: 1 },
-  label: { ...typography.body, color: colors.ink[800], flex: 1, fontWeight: "600" },
+  iconWrap: { width: 38, height: 38, alignItems: "center", justifyContent: "center", borderRadius: radii.md, backgroundColor: colors.brand[50] },
+  rowText: { flex: 1, gap: 2 },
+  label: { ...typography.body, color: colors.ink[800], fontWeight: "600" },
+  detail: { ...typography.caption, color: colors.ink[500] },
   pressed: { backgroundColor: colors.surface.soft }
 });
