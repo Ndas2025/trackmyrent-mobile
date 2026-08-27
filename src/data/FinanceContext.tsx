@@ -1,5 +1,7 @@
 import { createContext, type ReactNode, useContext, useEffect, useMemo, useState } from "react";
 import { backendRepository } from "../backend/repository";
+import { formatDisplayDate } from "../utils/date";
+import { useAuth } from "./AuthContext";
 import { useOnboarding } from "./OnboardingContext";
 
 export type PlanBillingCycle = "1 Month" | "3 Months" | "6 Months" | "1 Year";
@@ -34,83 +36,164 @@ const initialExpenses: Expense[] = [
 
 type PlanInput = Omit<Plan, "id" | "members" | "active">;
 type PlanUpdate = Partial<Omit<Plan, "id" | "members">> & { assignedMemberIds?: string[] };
+type LoadState = "idle" | "loading" | "ready" | "error";
 type FinanceValue = {
+  status: LoadState;
+  errorMessage: string | null;
   plans: Plan[];
   payments: Payment[];
   expenses: Expense[];
-  addPlan: (plan: PlanInput) => Plan;
-  updatePlan: (planId: string, updates: PlanUpdate) => void;
-  deletePlan: (planId: string) => void;
-  addPayment: (payment: Omit<Payment, "id" | "date">) => void;
-  addExpense: (expense: Omit<Expense, "id" | "date">) => void;
-  deleteExpense: (expenseId: string) => void;
+  addPlan: (plan: PlanInput) => Promise<Plan>;
+  updatePlan: (planId: string, updates: PlanUpdate) => Promise<void>;
+  deletePlan: (planId: string) => Promise<void>;
+  addPayment: (payment: Omit<Payment, "id" | "date">) => Promise<void>;
+  addExpense: (expense: Omit<Expense, "id" | "date">) => Promise<void>;
+  deleteExpense: (expenseId: string) => Promise<void>;
+  clearError: () => void;
 };
 const FinanceContext = createContext<FinanceValue | null>(null);
 export function FinanceProvider({ children }: { children: ReactNode }) {
-  const { ready, category } = useOnboarding();
+  const { ready } = useOnboarding();
+  const { loading: authLoading, session, isBackendConfigured } = useAuth();
+  const [status, setStatus] = useState<LoadState>("idle");
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [plans, setPlans] = useState<Plan[]>([]);
   const [payments, setPayments] = useState<Payment[]>([]);
   const [expenses, setExpenses] = useState<Expense[]>([]);
   useEffect(() => {
-    if (!ready) return;
+    if (!ready || authLoading) return;
 
     let active = true;
-    if (category !== "Others") {
+    setErrorMessage(null);
+
+    if (isBackendConfigured && !session) {
       setPlans([]);
       setPayments([]);
       setExpenses([]);
+      setStatus("ready");
       return () => {
         active = false;
       };
     }
 
+    setStatus("loading");
     backendRepository
       .loadAll()
       .then((data) => {
         if (!active) return;
         if (!data) {
-          setPlans(initialPlans);
-          setPayments(initialPayments);
-          setExpenses(initialExpenses);
+          setPlans(isBackendConfigured ? [] : initialPlans);
+          setPayments(isBackendConfigured ? [] : initialPayments);
+          setExpenses(isBackendConfigured ? [] : initialExpenses);
+          setStatus("ready");
           return;
         }
-        setPlans(data.plans.length ? data.plans : initialPlans);
-        setPayments(data.payments.length ? data.payments : initialPayments);
-        setExpenses(data.expenses.length ? data.expenses : initialExpenses);
+        setPlans(data.plans);
+        setPayments(data.payments);
+        setExpenses(data.expenses);
+        setStatus("ready");
       })
-      .catch(console.warn);
+      .catch((error) => {
+        if (!active) return;
+        console.warn(error);
+        setPlans(isBackendConfigured ? [] : initialPlans);
+        setPayments(isBackendConfigured ? [] : initialPayments);
+        setExpenses(isBackendConfigured ? [] : initialExpenses);
+        setStatus("error");
+        setErrorMessage(error instanceof Error ? error.message : "We couldn't load finance data right now.");
+      });
 
     return () => {
       active = false;
     };
-  }, [category, ready]);
+  }, [authLoading, isBackendConfigured, ready, session]);
 
-  const today = () => new Date().toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
-  const value = useMemo(() => ({ plans, payments, expenses,
-    addPlan: (plan: PlanInput) => {
+  const today = () => formatDisplayDate(new Date());
+  const value = useMemo(() => ({ status, errorMessage, plans, payments, expenses,
+    clearError: () => setErrorMessage(null),
+    addPlan: async (plan: PlanInput) => {
       const created = { ...plan, id: `p${Date.now()}`, members: plan.assignedMemberIds?.length ?? 0, active: true, assignedMemberIds: plan.assignedMemberIds ?? [] } satisfies Plan;
       setPlans((items) => [created, ...items]);
-      backendRepository.savePlan(created).catch(console.warn);
+      setErrorMessage(null);
+      try {
+        await backendRepository.savePlan(created);
+      } catch (error) {
+        setPlans((items) => items.filter((item) => item.id !== created.id));
+        setErrorMessage(error instanceof Error ? error.message : "We couldn't save the plan.");
+        throw error;
+      }
       return created;
     },
-    updatePlan: (planId: string, updates: PlanUpdate) => {
-      setPlans((items) => items.map((plan) => {
-        if (plan.id !== planId) return plan;
-        const next: Plan = {
-          ...plan,
-          ...updates,
-          assignedMemberIds: updates.assignedMemberIds ?? plan.assignedMemberIds,
-          members: (updates.assignedMemberIds ?? plan.assignedMemberIds).length
-        };
-        backendRepository.savePlan(next).catch(console.warn);
-        return next;
-      }));
+    updatePlan: async (planId: string, updates: PlanUpdate) => {
+      const currentPlan = plans.find((plan) => plan.id === planId);
+      if (!currentPlan) return;
+      const nextPlan: Plan = {
+        ...currentPlan,
+        ...updates,
+        assignedMemberIds: updates.assignedMemberIds ?? currentPlan.assignedMemberIds,
+        members: (updates.assignedMemberIds ?? currentPlan.assignedMemberIds).length
+      };
+      setPlans((items) => items.map((plan) => plan.id === planId ? nextPlan : plan));
+      setErrorMessage(null);
+      try {
+        await backendRepository.savePlan(nextPlan);
+      } catch (error) {
+        setPlans((items) => items.map((plan) => plan.id === planId ? currentPlan : plan));
+        setErrorMessage(error instanceof Error ? error.message : "We couldn't update the plan.");
+        throw error;
+      }
     },
-    deletePlan: (planId: string) => { setPlans((items) => items.filter((plan) => plan.id !== planId)); backendRepository.deletePlan(planId).catch(console.warn); },
-    addPayment: (payment: Omit<Payment, "id" | "date">) => { const created = { ...payment, id: `pay${Date.now()}`, date: today() } satisfies Payment; setPayments((items) => [created, ...items]); backendRepository.savePayment(created).catch(console.warn); },
-    addExpense: (expense: Omit<Expense, "id" | "date">) => { const created = { ...expense, id: `e${Date.now()}`, date: today() } satisfies Expense; setExpenses((items) => [created, ...items]); backendRepository.saveExpense(created).catch(console.warn); },
-    deleteExpense: (expenseId: string) => { setExpenses((items) => items.filter((expense) => expense.id !== expenseId)); backendRepository.deleteExpense(expenseId).catch(console.warn); }
-  }), [plans, payments, expenses]);
+    deletePlan: async (planId: string) => {
+      const currentPlan = plans.find((plan) => plan.id === planId);
+      if (!currentPlan) return;
+      setPlans((items) => items.filter((plan) => plan.id !== planId));
+      setErrorMessage(null);
+      try {
+        await backendRepository.deletePlan(planId);
+      } catch (error) {
+        setPlans((items) => [currentPlan, ...items]);
+        setErrorMessage(error instanceof Error ? error.message : "We couldn't delete the plan.");
+        throw error;
+      }
+    },
+    addPayment: async (payment: Omit<Payment, "id" | "date">) => {
+      const created = { ...payment, id: `pay${Date.now()}`, date: today() } satisfies Payment;
+      setPayments((items) => [created, ...items]);
+      setErrorMessage(null);
+      try {
+        await backendRepository.savePayment(created);
+      } catch (error) {
+        setPayments((items) => items.filter((item) => item.id !== created.id));
+        setErrorMessage(error instanceof Error ? error.message : "We couldn't record the payment.");
+        throw error;
+      }
+    },
+    addExpense: async (expense: Omit<Expense, "id" | "date">) => {
+      const created = { ...expense, id: `e${Date.now()}`, date: today() } satisfies Expense;
+      setExpenses((items) => [created, ...items]);
+      setErrorMessage(null);
+      try {
+        await backendRepository.saveExpense(created);
+      } catch (error) {
+        setExpenses((items) => items.filter((item) => item.id !== created.id));
+        setErrorMessage(error instanceof Error ? error.message : "We couldn't save the expense.");
+        throw error;
+      }
+    },
+    deleteExpense: async (expenseId: string) => {
+      const currentExpense = expenses.find((expense) => expense.id === expenseId);
+      if (!currentExpense) return;
+      setExpenses((items) => items.filter((expense) => expense.id !== expenseId));
+      setErrorMessage(null);
+      try {
+        await backendRepository.deleteExpense(expenseId);
+      } catch (error) {
+        setExpenses((items) => [currentExpense, ...items]);
+        setErrorMessage(error instanceof Error ? error.message : "We couldn't delete the expense.");
+        throw error;
+      }
+    }
+  }), [errorMessage, expenses, payments, plans, status]);
   return <FinanceContext.Provider value={value}>{children}</FinanceContext.Provider>;
 }
 export function useFinance() { const value = useContext(FinanceContext); if (!value) throw new Error("useFinance must be used inside FinanceProvider"); return value; }

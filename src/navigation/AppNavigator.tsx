@@ -7,10 +7,14 @@ import { AccountSetupScreen } from "../screens/AccountSetupScreen";
 import { AddMemberScreen } from "../screens/AddMemberScreen";
 import { AddExpenseScreen } from "../screens/AddExpenseScreen";
 import { AddPlanScreen } from "../screens/AddPlanScreen";
+import { AuthScreen } from "../screens/AuthScreen";
 import { DashboardScreen } from "../screens/DashboardScreen";
+import { DeleteAccountScreen } from "../screens/DeleteAccountScreen";
 import { ExpenseDetailScreen } from "../screens/ExpenseDetailScreen";
 import { MemberDetailScreen } from "../screens/MemberDetailScreen";
 import { ExpensesScreen } from "../screens/ExpensesScreen";
+import { MembersScreen } from "../screens/MembersScreen";
+import { PaymentsScreen } from "../screens/PaymentsScreen";
 import { PlanDetailScreen } from "../screens/PlanDetailScreen";
 import { PlansScreen } from "../screens/PlansScreen";
 import { ProfileScreen } from "../screens/ProfileScreen";
@@ -54,11 +58,14 @@ export function AppNavigator() {
   return (
     <Stack.Navigator initialRouteName="Splash" screenOptions={{ headerShadowVisible: false, headerStyle: { backgroundColor: colors.surface.card }, headerTintColor: colors.ink[900], headerTitleStyle: typography.sectionTitle }}>
       <Stack.Screen name="Splash" component={SplashScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="Auth" component={AuthScreen} options={{ headerShown: false }} />
       <Stack.Screen name="Intro" component={IntroScreen} options={{ headerShown: false }} />
       <Stack.Screen name="AccountSetup" component={AccountSetupScreen} options={{ headerShown: false }} />
       <Stack.Screen name="CategorySelect" component={CategorySelectionScreen} options={{ headerShown: false }} />
       <Stack.Screen name="SubscriptionSelect" component={SubscriptionSelectionScreen} options={{ headerShown: false }} />
       <Stack.Screen name="MainTabs" component={MainTabs} options={{ headerShown: false }} />
+      <Stack.Screen name="Members" component={MembersScreen} options={{ title: "Members" }} />
+      <Stack.Screen name="Payments" component={PaymentsScreen} options={{ title: "Payments" }} />
       <Stack.Screen name="AddMember" component={AddMemberScreen} options={{ title: "Add member" }} />
       <Stack.Screen name="AddExpense" component={AddExpenseScreen} options={{ title: "Add expense" }} />
       <Stack.Screen name="AddPlan" component={AddPlanScreen} options={{ title: "Add plan" }} />
@@ -67,6 +74,7 @@ export function AppNavigator() {
       <Stack.Screen name="MemberDetail" component={MemberDetailScreen} options={{ title: "Member details" }} />
       <Stack.Screen name="ExpenseDetail" component={ExpenseDetailScreen} options={{ title: "Expense details" }} />
       <Stack.Screen name="Profile" component={ProfileScreen} options={{ title: "Profile" }} />
+      <Stack.Screen name="DeleteAccount" component={DeleteAccountScreen} options={{ title: "Delete account" }} />
     </Stack.Navigator>
   );
 }

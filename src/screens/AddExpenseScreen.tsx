@@ -1,7 +1,9 @@
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
+import { Alert } from "react-native";
 import { useState } from "react";
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from "react-native";
 import { Button, Card, TextField } from "../components/ui";
+import { SyncStatusCard } from "../components/SyncStatusCard";
 import { useFinance, type Expense } from "../data/FinanceContext";
 import { colors, spacing, typography } from "../design";
 import type { RootStackParamList } from "../navigation/types";
@@ -12,7 +14,7 @@ type ExpenseRecurrence = Expense["recurrence"];
 const recurrenceOptions: ExpenseRecurrence[] = ["Monthly", "This month"];
 
 export function AddExpenseScreen({ navigation }: Props) {
-  const { addExpense } = useFinance();
+  const { addExpense, errorMessage, clearError } = useFinance();
   const [form, setForm] = useState<{ title: string; category: string; amount: string; recurrence: ExpenseRecurrence }>({
     title: "",
     category: "",
@@ -20,6 +22,7 @@ export function AddExpenseScreen({ navigation }: Props) {
     recurrence: "This month"
   });
   const [submitted, setSubmitted] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   const set = (key: keyof Omit<typeof form, "recurrence">) => (value: string) => setForm((current) => ({ ...current, [key]: value }));
 
@@ -29,16 +32,25 @@ export function AddExpenseScreen({ navigation }: Props) {
     amount: submitted && !(Number(form.amount) > 0) ? "Enter a valid amount" : undefined
   };
 
-  const save = () => {
+  const save = async () => {
     setSubmitted(true);
     if (errors.title || errors.category || errors.amount) return;
-    addExpense({
-      title: form.title.trim(),
-      category: form.category.trim(),
-      amount: Number(form.amount),
-      recurrence: form.recurrence
-    });
-    navigation.goBack();
+    clearError();
+    try {
+      setSaving(true);
+      await addExpense({
+        title: form.title.trim(),
+        category: form.category.trim(),
+        amount: Number(form.amount),
+        recurrence: form.recurrence
+      });
+      navigation.goBack();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "We couldn't save the expense.";
+      Alert.alert("Save failed", message);
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -47,6 +59,7 @@ export function AddExpenseScreen({ navigation }: Props) {
         <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
           <Card style={styles.form}>
             <Text style={styles.section}>New expense</Text>
+            {errorMessage ? <SyncStatusCard title="Sync problem" message={errorMessage} tone="error" /> : null}
             <TextField label="Description" value={form.title} onChangeText={set("title")} placeholder="e.g. Lift maintenance" errorText={errors.title} />
             <TextField label="Category" value={form.category} onChangeText={set("category")} placeholder="e.g. Maintenance" errorText={errors.category} />
             <TextField label="Amount" value={form.amount} onChangeText={set("amount")} keyboardType="numeric" placeholder="₹ 0" errorText={errors.amount} />
@@ -73,7 +86,7 @@ export function AddExpenseScreen({ navigation }: Props) {
         </ScrollView>
 
         <View style={styles.footer}>
-          <Button fullWidth onPress={save}>
+          <Button fullWidth loading={saving} onPress={save}>
             Save expense
           </Button>
         </View>

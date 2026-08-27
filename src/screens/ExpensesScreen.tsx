@@ -10,22 +10,7 @@ import { useFinance, type Expense } from "../data/FinanceContext";
 import { formatCurrency } from "../data/members";
 import { colors, radii, spacing, typography } from "../design";
 import type { RootStackParamList } from "../navigation/types";
-
-const monthNames = [
-  "January",
-  "February",
-  "March",
-  "April",
-  "May",
-  "June",
-  "July",
-  "August",
-  "September",
-  "October",
-  "November",
-  "December"
-];
-const monthShortNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+import { isDateInMonthYear, monthNames } from "../utils/date";
 
 export function ExpensesScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
@@ -35,8 +20,7 @@ export function ExpensesScreen() {
   const [selectedYear, setSelectedYear] = useState(now.getFullYear());
 
   const filteredExpenses = useMemo(() => {
-    const monthShort = monthShortNames[selectedMonth];
-    return expenses.filter((expense) => expense.date.includes(`${monthShort} ${selectedYear}`));
+    return expenses.filter((expense) => isDateInMonthYear(expense.date, selectedMonth, selectedYear));
   }, [expenses, selectedMonth, selectedYear]);
 
   const total = filteredExpenses.reduce((sum, expense) => sum + expense.amount, 0);
@@ -55,7 +39,7 @@ export function ExpensesScreen() {
         <PeriodPicker
           monthLabel={monthNames[selectedMonth]}
           yearLabel={`${selectedYear}`}
-          monthOptions={monthNames}
+          monthOptions={[...monthNames]}
           yearOptions={[2025, 2026, 2027]}
           monthIndex={selectedMonth}
           year={selectedYear}
@@ -79,6 +63,7 @@ export function ExpensesScreen() {
               onPress={() => navigation.navigate("ExpenseDetail", { expenseId: expense.id })}
             />
           ))}
+          {filteredExpenses.length === 0 ? <Text style={styles.summaryDetail}>No expenses recorded for this period yet.</Text> : null}
         </View>
       </ScrollView>
 

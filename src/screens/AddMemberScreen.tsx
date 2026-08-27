@@ -1,8 +1,9 @@
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { Sparkles, Trash2 } from "lucide-react-native";
 import { useEffect, useMemo, useState } from "react";
-import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { Button, Card, TextField } from "../components/ui";
+import { SyncStatusCard } from "../components/SyncStatusCard";
 import { useMembers } from "../data/MembersContext";
 import { useOnboarding, type OnboardingCategory } from "../data/OnboardingContext";
 import { colors, radii, spacing, typography } from "../design";
@@ -67,13 +68,14 @@ function createInitialForm(category: OnboardingCategory): FormState {
 }
 
 export function AddMemberScreen({ navigation }: Props) {
-  const { addMember } = useMembers();
+  const { addMember, errorMessage, clearError } = useMembers();
   const { category } = useOnboarding();
   const activeCategory = category ?? "Building rent";
   const planOptions = activeCategory === "Others" ? [] : planCatalog[activeCategory];
 
   const [form, setForm] = useState<FormState>(() => createInitialForm(activeCategory));
   const [submitted, setSubmitted] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     setSubmitted(false);
@@ -136,7 +138,7 @@ export function AddMemberScreen({ navigation }: Props) {
 
   const errors = getErrors(submitted);
 
-  const save = () => {
+  const save = async () => {
     const nextErrors = getErrors(true);
     setSubmitted(true);
     if (Object.values(nextErrors).some(Boolean)) return;
@@ -164,24 +166,33 @@ export function AddMemberScreen({ navigation }: Props) {
               ? form.roomType.trim()
               : summary || "Custom fields";
 
-    const member = addMember({
-      category: activeCategory,
-      name: form.name.trim(),
-      business: businessName,
-      planName: plan?.title ?? undefined,
-      phone: form.phone.trim(),
-      unit,
-      batch: activeCategory === "Gym" || activeCategory === "Tution centre" ? form.batch.trim() : undefined,
-      roomType: activeCategory === "Hostal/PG" ? form.roomType.trim() : undefined,
-      groupName: activeCategory === "Others" ? form.groupName.trim() : undefined,
-      customFields: activeCategory === "Others" ? customFields : undefined,
-      monthlyRent: Number(form.monthlyRent),
-      dueDay: Number(form.dueDay),
-      billingMonth: new Date().toLocaleDateString("en-US", { month: "long" }),
-      billingYear: new Date().getFullYear()
-    });
+    clearError();
+    try {
+      setSaving(true);
+      const member = await addMember({
+        category: activeCategory,
+        name: form.name.trim(),
+        business: businessName,
+        planName: plan?.title ?? undefined,
+        phone: form.phone.trim(),
+        unit,
+        batch: activeCategory === "Gym" || activeCategory === "Tution centre" ? form.batch.trim() : undefined,
+        roomType: activeCategory === "Hostal/PG" ? form.roomType.trim() : undefined,
+        groupName: activeCategory === "Others" ? form.groupName.trim() : undefined,
+        customFields: activeCategory === "Others" ? customFields : undefined,
+        monthlyRent: Number(form.monthlyRent),
+        dueDay: Number(form.dueDay),
+        billingMonth: new Date().toLocaleDateString("en-US", { month: "long" }),
+        billingYear: new Date().getFullYear()
+      });
 
-    navigation.replace("MemberDetail", { memberId: member.id });
+      navigation.replace("MemberDetail", { memberId: member.id });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "We couldn't save the member.";
+      Alert.alert("Save failed", message);
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -190,6 +201,7 @@ export function AddMemberScreen({ navigation }: Props) {
         <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
           <Card style={styles.form}>
             <Text style={styles.section}>Member details</Text>
+            {errorMessage ? <SyncStatusCard title="Sync problem" message={errorMessage} tone="error" /> : null}
             <TextField label="Full name" value={form.name} onChangeText={set("name")} placeholder="e.g. Priya Sharma" errorText={errors.name} />
             <TextField label="Phone number" value={form.phone} onChangeText={set("phone")} keyboardType="phone-pad" placeholder="+91 98765 43210" errorText={errors.phone} />
           </Card>
@@ -328,7 +340,7 @@ export function AddMemberScreen({ navigation }: Props) {
         </ScrollView>
 
         <View style={styles.footer}>
-          <Button fullWidth onPress={save}>
+          <Button fullWidth loading={saving} onPress={save}>
             Save member
           </Button>
         </View>

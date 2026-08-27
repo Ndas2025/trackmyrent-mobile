@@ -1,9 +1,10 @@
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useEffect, useMemo, useState } from "react";
-import { KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Alert, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { BillingCyclePicker } from "../components/BillingCyclePicker";
 import { Badge, Button, Card, TextField } from "../components/ui";
 import { PlanMemberPicker } from "../components/PlanMemberPicker";
+import { SyncStatusCard } from "../components/SyncStatusCard";
 import { useFinance } from "../data/FinanceContext";
 import { useMembers } from "../data/MembersContext";
 import { formatCurrency } from "../data/members";
@@ -13,10 +14,12 @@ import type { RootStackParamList } from "../navigation/types";
 type Props = NativeStackScreenProps<RootStackParamList, "PlanDetail">;
 
 export function PlanDetailScreen({ route, navigation }: Props) {
-  const { plans, updatePlan, deletePlan } = useFinance();
+  const { plans, updatePlan, deletePlan, errorMessage, clearError } = useFinance();
   const { members } = useMembers();
   const plan = plans.find((item) => item.id === route.params.planId);
   const [confirmVisible, setConfirmVisible] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   const [form, setForm] = useState({
     name: plan?.name ?? "",
@@ -71,22 +74,40 @@ export function PlanDetailScreen({ route, navigation }: Props) {
   };
   const canSave = dirty && !errors.name && !errors.amount;
 
-  const save = () => {
+  const save = async () => {
     if (errors.name || errors.amount) return;
-    updatePlan(plan.id, {
-      name: form.name.trim(),
-      amount: Number(form.amount),
-      billingCycle: form.cycle,
-      assignedMemberIds: form.assignedMemberIds
-    });
-    navigation.goBack();
+    clearError();
+    try {
+      setSaving(true);
+      await updatePlan(plan.id, {
+        name: form.name.trim(),
+        amount: Number(form.amount),
+        billingCycle: form.cycle,
+        assignedMemberIds: form.assignedMemberIds
+      });
+      navigation.goBack();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "We couldn't update the plan.";
+      Alert.alert("Save failed", message);
+    } finally {
+      setSaving(false);
+    }
   };
 
   const confirmDelete = () => setConfirmVisible(true);
-  const deleteNow = () => {
-    deletePlan(plan.id);
-    setConfirmVisible(false);
-    navigation.goBack();
+  const deleteNow = async () => {
+    clearError();
+    try {
+      setDeleting(true);
+      await deletePlan(plan.id);
+      setConfirmVisible(false);
+      navigation.goBack();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "We couldn't delete the plan.";
+      Alert.alert("Delete failed", message);
+    } finally {
+      setDeleting(false);
+    }
   };
 
   return (
@@ -112,6 +133,7 @@ export function PlanDetailScreen({ route, navigation }: Props) {
 
           <Card style={styles.form}>
             <Text style={styles.section}>Plan details</Text>
+            {errorMessage ? <SyncStatusCard title="Sync problem" message={errorMessage} tone="error" /> : null}
             <TextField label="Plan name" value={form.name} onChangeText={set("name")} placeholder="e.g. Standard Shop" errorText={errors.name} />
             <TextField label="Monthly rent" value={form.amount} onChangeText={set("amount")} keyboardType="numeric" placeholder="₹ 0" errorText={errors.amount} />
           </Card>
@@ -132,11 +154,11 @@ export function PlanDetailScreen({ route, navigation }: Props) {
           <View style={styles.footerRow}>
             <View style={styles.footerDelete}>
               <Button fullWidth variant="danger" onPress={confirmDelete}>
-                Delete
+                {deleting ? "Deleting..." : "Delete"}
               </Button>
             </View>
             <View style={styles.footerSave}>
-              <Button fullWidth disabled={!canSave} onPress={save}>
+              <Button fullWidth loading={saving} disabled={!canSave || deleting} onPress={save}>
                 Save changes
               </Button>
             </View>
@@ -157,7 +179,7 @@ export function PlanDetailScreen({ route, navigation }: Props) {
                 </Button>
               </View>
               <View style={styles.modalPrimary}>
-                <Button variant="danger" fullWidth onPress={deleteNow}>
+                <Button variant="danger" fullWidth loading={deleting} onPress={deleteNow}>
                   Delete
                 </Button>
               </View>

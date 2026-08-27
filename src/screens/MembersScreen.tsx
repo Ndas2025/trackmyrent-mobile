@@ -3,6 +3,7 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { Plus, Search, Users } from "lucide-react-native";
 import { useMemo, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import { SyncStatusCard } from "../components/SyncStatusCard";
 import { MemberRow } from "../components/MemberRow";
 import { Card, SummaryCard } from "../components/ui";
 import { useMembers } from "../data/MembersContext";
@@ -14,7 +15,7 @@ const filters = ["All", "Paid", "Pending", "Overdue"] as const;
 export function MembersScreen() {
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<(typeof filters)[number]>("All");
-  const { members } = useMembers();
+  const { members, status, errorMessage } = useMembers();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
 
   const filtered = useMemo(() => {
@@ -57,6 +58,8 @@ export function MembersScreen() {
           ))}
         </View>
       </Card>
+      {status === "loading" ? <SyncStatusCard title="Loading members" message="We are refreshing the member list for this account." /> : null}
+      {errorMessage ? <SyncStatusCard title="Member sync problem" message={errorMessage} tone="error" /> : null}
 
       <View style={styles.grid}>
         <SummaryCard label="All members" value={`${members.length}`} detail="Active profiles" />

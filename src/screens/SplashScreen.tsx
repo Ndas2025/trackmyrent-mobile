@@ -2,6 +2,7 @@ import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { Building2 } from "lucide-react-native";
 import { useEffect, useState } from "react";
 import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
+import { useAuth } from "../data/AuthContext";
 import { colors, radii, spacing, typography } from "../design";
 import { useOnboarding } from "../data/OnboardingContext";
 import type { RootStackParamList } from "../navigation/types";
@@ -9,18 +10,25 @@ import type { RootStackParamList } from "../navigation/types";
 type Props = NativeStackScreenProps<RootStackParamList, "Splash">;
 
 export function SplashScreen({ navigation }: Props) {
-  const { ready } = useOnboarding();
+  const { ready, completed } = useOnboarding();
+  const { loading, session, isBackendConfigured } = useAuth();
   const [elapsed, setElapsed] = useState(false);
 
   useEffect(() => {
-    const timer = setTimeout(() => setElapsed(true), 10000);
+    const timer = setTimeout(() => setElapsed(true), 1200);
     return () => clearTimeout(timer);
   }, []);
 
   useEffect(() => {
-    if (!ready || !elapsed) return;
-    navigation.replace("Intro");
-  }, [elapsed, navigation, ready]);
+    if (!ready || !elapsed || loading) return;
+
+    if (isBackendConfigured && !session) {
+      navigation.replace("Auth");
+      return;
+    }
+
+    navigation.replace(completed ? "MainTabs" : "Intro");
+  }, [completed, elapsed, isBackendConfigured, loading, navigation, ready, session]);
 
   return (
     <View style={styles.screen}>
@@ -28,13 +36,13 @@ export function SplashScreen({ navigation }: Props) {
         <View style={styles.logoBox}>
           <Building2 color={colors.brand[700]} size={42} />
         </View>
-        <Text style={styles.name}>RentTrack</Text>
+        <Text style={styles.name}>TrackmyRent</Text>
         <Text style={styles.tagline}>Paid and unpaid rent, expenses, and plans in one place.</Text>
       </View>
 
       <View style={styles.footer}>
         <ActivityIndicator color={colors.brand[600]} />
-        <Text style={styles.footerText}>Preparing your workspace</Text>
+        <Text style={styles.footerText}>{loading ? "Restoring your account" : "Preparing your workspace"}</Text>
       </View>
     </View>
   );

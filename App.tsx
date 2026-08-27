@@ -3,6 +3,7 @@ import { StatusBar } from "expo-status-bar";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { AppNavigator } from "./src/navigation/AppNavigator";
 import { colors } from "./src/design";
+import { AuthProvider } from "./src/data/AuthContext";
 import { MembersProvider } from "./src/data/MembersContext";
 import { FinanceProvider } from "./src/data/FinanceContext";
 import { OnboardingProvider } from "./src/data/OnboardingContext";
@@ -28,16 +29,18 @@ const theme = {
 export default function App() {
   return (
     <SafeAreaProvider>
-      <OnboardingProvider>
-        <MembersProvider>
-          <FinanceProvider>
-            <NavigationContainer theme={theme}>
-              <AppNavigator />
-              <StatusBar style="dark" />
-            </NavigationContainer>
-          </FinanceProvider>
-        </MembersProvider>
-      </OnboardingProvider>
+      <AuthProvider>
+        <OnboardingProvider>
+          <MembersProvider>
+            <FinanceProvider>
+              <NavigationContainer theme={theme}>
+                <AppNavigator />
+                <StatusBar style="dark" />
+              </NavigationContainer>
+            </FinanceProvider>
+          </MembersProvider>
+        </OnboardingProvider>
+      </AuthProvider>
     </SafeAreaProvider>
   );
 }

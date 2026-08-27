@@ -6,6 +6,14 @@
 - `preview`: internally distributed Android APK and iOS ad hoc build.
 - `production`: store-ready Android App Bundle and signed iOS archive.
 
+## Recommended order
+
+1. Finish app changes and run type-checking.
+2. Run a preview build for internal testing.
+3. Complete physical-device QA.
+4. Fix release blockers.
+5. Run production builds only after QA passes.
+
 ## Fast preview build checklist
 
 Use this when you want to send a fresh installable demo to colleagues.
@@ -39,3 +47,28 @@ Use this when you want to send a fresh installable demo to colleagues.
 - The build scripts already pre-allow pnpm's `dtrace-provider` native package so you should not have to answer an interactive approval prompt.
 - Production builds are only for App Store / Play Store release.
 - Never commit `.env`, signing certificates, provisioning profiles, keystores, or service-account files.
+
+## Production build checklist
+
+Use this only after internal QA is complete.
+
+### Before production builds
+
+1. Confirm the final app identifiers are correct in `app.json`.
+2. Confirm the Supabase production environment values are configured.
+3. Confirm support email, support URL, and privacy policy URL are final.
+4. Confirm store screenshots and metadata match the current product behavior.
+5. Confirm the current branch is the intended release candidate.
+
+### Production build commands
+
+- Android App Bundle: `pnpm build:android`
+- iOS archive: `pnpm build:ios`
+- Both: `pnpm build:all`
+
+### After production builds
+
+1. Download and validate the generated artifacts.
+2. Upload Android to Google Play internal testing first.
+3. Upload iOS to App Store Connect / TestFlight.
+4. Perform release-candidate testing from the real installable builds.

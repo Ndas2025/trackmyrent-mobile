@@ -1,9 +1,11 @@
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
+import { Alert } from "react-native";
 import { useMemo, useState } from "react";
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from "react-native";
 import { BillingCyclePicker } from "../components/BillingCyclePicker";
 import { Button, Card, TextField } from "../components/ui";
 import { PlanMemberPicker } from "../components/PlanMemberPicker";
+import { SyncStatusCard } from "../components/SyncStatusCard";
 import { useFinance, type PlanBillingCycle } from "../data/FinanceContext";
 import { useMembers } from "../data/MembersContext";
 import { colors, spacing, typography } from "../design";
@@ -12,7 +14,7 @@ import type { RootStackParamList } from "../navigation/types";
 type Props = NativeStackScreenProps<RootStackParamList, "AddPlan">;
 
 export function AddPlanScreen({ navigation }: Props) {
-  const { addPlan } = useFinance();
+  const { addPlan, errorMessage, clearError } = useFinance();
   const { members } = useMembers();
   const [form, setForm] = useState<{ name: string; amount: string; cycle: PlanBillingCycle; assignedMemberIds: string[] }>({
     name: "",
@@ -21,6 +23,7 @@ export function AddPlanScreen({ navigation }: Props) {
     assignedMemberIds: []
   });
   const [submitted, setSubmitted] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   const selectedMembers = useMemo(() => members.filter((member) => form.assignedMemberIds.includes(member.id)), [form.assignedMemberIds, members]);
 
@@ -38,16 +41,25 @@ export function AddPlanScreen({ navigation }: Props) {
     amount: submitted && !(Number(form.amount) > 0) ? "Enter a valid rent amount" : undefined
   };
 
-  const save = () => {
+  const save = async () => {
     setSubmitted(true);
     if (errors.name || errors.amount) return;
-    const created = addPlan({
-      name: form.name.trim(),
-      amount: Number(form.amount),
-      billingCycle: form.cycle,
-      assignedMemberIds: form.assignedMemberIds
-    });
-    navigation.replace("PlanDetail", { planId: created.id });
+    clearError();
+    try {
+      setSaving(true);
+      const created = await addPlan({
+        name: form.name.trim(),
+        amount: Number(form.amount),
+        billingCycle: form.cycle,
+        assignedMemberIds: form.assignedMemberIds
+      });
+      navigation.replace("PlanDetail", { planId: created.id });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "We couldn't save the plan.";
+      Alert.alert("Save failed", message);
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -56,6 +68,7 @@ export function AddPlanScreen({ navigation }: Props) {
         <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
           <Card style={styles.form}>
             <Text style={styles.section}>Plan details</Text>
+            {errorMessage ? <SyncStatusCard title="Sync problem" message={errorMessage} tone="error" /> : null}
             <TextField
               label="Plan name"
               value={form.name}
@@ -92,7 +105,7 @@ export function AddPlanScreen({ navigation }: Props) {
         </ScrollView>
 
         <View style={styles.footer}>
-          <Button fullWidth onPress={save}>
+          <Button fullWidth loading={saving} onPress={save}>
             Save plan
           </Button>
         </View>

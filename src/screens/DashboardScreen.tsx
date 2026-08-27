@@ -1,10 +1,11 @@
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import { CalendarRange, ChevronRight, Users } from "lucide-react-native";
+import { CalendarRange, ChevronRight, Users, WalletCards } from "lucide-react-native";
 import { useMemo, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { AppHeader } from "../components/AppHeader";
 import { PeriodPicker } from "../components/PeriodPicker";
+import { SyncStatusCard } from "../components/SyncStatusCard";
 import { Badge, Button, Card } from "../components/ui";
 import { useMembers } from "../data/MembersContext";
 import { formatCurrency, type Member } from "../data/members";
@@ -30,7 +31,7 @@ const memberFilters = ["All", "Paid", "Unpaid"] as const;
 
 export function DashboardScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
-  const { members, markPaid } = useMembers();
+  const { members, markPaid, status, errorMessage } = useMembers();
   const now = new Date();
   const [selectedMonth, setSelectedMonth] = useState(now.getMonth());
   const [selectedYear, setSelectedYear] = useState(now.getFullYear());
@@ -74,6 +75,20 @@ export function DashboardScreen() {
           <MetricCard icon={Users} label="All members" value={`${periodMembers.length}`} />
           <MetricCard icon={CalendarRange} label="Total collected" value={formatCurrency(collected)} detail={`of ${formatCurrency(totalTarget)}`} />
         </View>
+        {status === "loading" ? <View style={styles.statusWrap}><SyncStatusCard title="Loading members" message="We are refreshing the current billing period." /></View> : null}
+        {errorMessage ? <View style={styles.statusWrap}><SyncStatusCard title="Member sync problem" message={errorMessage} tone="error" /></View> : null}
+
+        <Card style={styles.quickActions}>
+          <Text style={styles.quickActionsLabel}>Quick actions</Text>
+          <View style={styles.quickActionsRow}>
+            <Button fullWidth variant="secondary" onPress={() => navigation.navigate("Members")} style={styles.quickButton}>
+              View members
+            </Button>
+            <Button fullWidth variant="secondary" onPress={() => navigation.navigate("Payments")} style={styles.quickButton}>
+              Open payments
+            </Button>
+          </View>
+        </Card>
 
         <Card padded={false} style={styles.rosterCard}>
           <View style={styles.rosterHeader}>
@@ -201,6 +216,11 @@ const styles = StyleSheet.create({
   filtersRow: { flexDirection: "row", gap: spacing[3], paddingHorizontal: spacing[4], paddingTop: spacing[3] },
   metricsRow: { flexDirection: "row", gap: spacing[3], paddingHorizontal: spacing[4], paddingTop: spacing[4] },
   metricCard: { flex: 1, gap: spacing[2], minHeight: 136 },
+  statusWrap: { marginHorizontal: spacing[4], marginTop: spacing[4] },
+  quickActions: { gap: spacing[3], marginHorizontal: spacing[4], marginTop: spacing[4] },
+  quickActionsLabel: { ...typography.caption, color: colors.ink[500], textTransform: "uppercase" },
+  quickActionsRow: { flexDirection: "row", gap: spacing[3] },
+  quickButton: { flex: 1 },
   metricTop: { flexDirection: "row", alignItems: "center", gap: spacing[2] },
   metricIcon: {
     width: 30,

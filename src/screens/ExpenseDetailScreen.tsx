@@ -1,8 +1,9 @@
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { CalendarDays, Repeat2 } from "lucide-react-native";
 import { useState } from "react";
-import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Alert, Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { Button, Card } from "../components/ui";
+import { SyncStatusCard } from "../components/SyncStatusCard";
 import { useFinance } from "../data/FinanceContext";
 import { formatCurrency } from "../data/members";
 import { colors, spacing, typography } from "../design";
@@ -11,9 +12,10 @@ import type { RootStackParamList } from "../navigation/types";
 type Props = NativeStackScreenProps<RootStackParamList, "ExpenseDetail">;
 
 export function ExpenseDetailScreen({ route, navigation }: Props) {
-  const { expenses, deleteExpense } = useFinance();
+  const { expenses, deleteExpense, errorMessage, clearError } = useFinance();
   const expense = expenses.find((item) => item.id === route.params.expenseId);
   const [confirmVisible, setConfirmVisible] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   if (!expense) {
     return (
@@ -24,10 +26,19 @@ export function ExpenseDetailScreen({ route, navigation }: Props) {
   }
 
   const confirmDelete = () => setConfirmVisible(true);
-  const deleteNow = () => {
-    deleteExpense(expense.id);
-    setConfirmVisible(false);
-    navigation.goBack();
+  const deleteNow = async () => {
+    clearError();
+    try {
+      setDeleting(true);
+      await deleteExpense(expense.id);
+      setConfirmVisible(false);
+      navigation.goBack();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "We couldn't delete the expense.";
+      Alert.alert("Delete failed", message);
+    } finally {
+      setDeleting(false);
+    }
   };
 
   return (
@@ -47,6 +58,7 @@ export function ExpenseDetailScreen({ route, navigation }: Props) {
         </Card>
 
         <Card style={styles.details}>
+          {errorMessage ? <SyncStatusCard title="Sync problem" message={errorMessage} tone="error" /> : null}
           <Detail icon={Repeat2} label="Recurrence" value={expense.recurrence} />
           <Detail icon={CalendarDays} label="Recorded on" value={expense.date} />
         </Card>
@@ -55,7 +67,7 @@ export function ExpenseDetailScreen({ route, navigation }: Props) {
       </ScrollView>
 
       <View style={styles.footer}>
-        <Button variant="danger" fullWidth onPress={confirmDelete}>
+        <Button variant="danger" fullWidth loading={deleting} onPress={confirmDelete}>
           Delete expense
         </Button>
       </View>
@@ -72,7 +84,7 @@ export function ExpenseDetailScreen({ route, navigation }: Props) {
                 </Button>
               </View>
               <View style={styles.modalPrimary}>
-                <Button variant="danger" fullWidth onPress={deleteNow}>
+                <Button variant="danger" fullWidth loading={deleting} onPress={deleteNow}>
                   Delete
                 </Button>
               </View>
