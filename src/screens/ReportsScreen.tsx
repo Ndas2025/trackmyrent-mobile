@@ -2,7 +2,7 @@ import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { BarChart3, TrendingUp } from "lucide-react-native";
 import { useMemo, useState } from "react";
-import { ScrollView, StyleSheet, Text, View } from "react-native";
+import { ScrollView, StyleSheet, Text, useWindowDimensions, View } from "react-native";
 import { AppHeader } from "../components/AppHeader";
 import { PeriodPicker } from "../components/PeriodPicker";
 import { Card, SummaryCard } from "../components/ui";
@@ -14,6 +14,8 @@ import type { RootStackParamList } from "../navigation/types";
 import { getRecentPeriods, isDateInMonthYear, monthNames } from "../utils/date";
 
 export function ReportsScreen() {
+  const { width } = useWindowDimensions();
+  const isCompact = width < 380;
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { members } = useMembers();
   const { payments, expenses } = useFinance();
@@ -75,20 +77,20 @@ export function ReportsScreen() {
           onYearChange={setSelectedYear}
         />
 
-        <View style={styles.grid}>
+        <View style={[styles.grid, isCompact && styles.stackRow]}>
           <SummaryCard label="Income" value={formatCurrency(income)} detail="All recorded" />
           <SummaryCard label="Net balance" value={formatCurrency(income - costs)} detail={`After ${formatCurrency(costs)} expenses`} accent="blue" />
         </View>
 
         <Card style={styles.chart}>
-          <View style={styles.head}>
+          <View style={[styles.head, isCompact && styles.headCompact]}>
             <View>
               <Text style={styles.section}>Collection trend</Text>
               <Text style={styles.muted}>Last five months</Text>
             </View>
             <TrendingUp color={colors.status.paid} size={22} />
           </View>
-          <View style={styles.bars}>
+          <View style={[styles.bars, isCompact && styles.barsCompact]}>
             {trend.map((month) => (
               <View key={`${month.label}-${month.total}`} style={styles.barColumn}>
                 <View style={styles.barTrack}>
@@ -101,7 +103,7 @@ export function ReportsScreen() {
           </View>
         </Card>
 
-        <Card style={styles.metric}>
+        <Card style={[styles.metric, isCompact && styles.metricCompact]}>
           <BarChart3 color={colors.brand[600]} size={24} />
           <View style={styles.flex}>
             <Text style={styles.section}>Collection rate</Text>
@@ -149,16 +151,20 @@ const styles = StyleSheet.create({
   pageTitle: { fontSize: 18, lineHeight: 24, fontWeight: "800", color: colors.ink[900] },
   filtersRow: { flexDirection: "row", gap: spacing[3] },
   grid: { flexDirection: "row", gap: spacing[3], flexWrap: "wrap" },
+  stackRow: { flexDirection: "column" },
   chart: { gap: spacing[5] },
   head: { flexDirection: "row", justifyContent: "space-between" },
+  headCompact: { alignItems: "flex-start", gap: spacing[3] },
   section: { ...typography.sectionTitle, color: colors.ink[900] },
   bars: { height: 150, flexDirection: "row", gap: spacing[3], alignItems: "flex-end" },
+  barsCompact: { gap: spacing[2] },
   barColumn: { flex: 1, height: "100%", alignItems: "center", gap: spacing[2] },
   barTrack: { flex: 1, width: "100%", justifyContent: "flex-end", backgroundColor: colors.surface.soft, borderRadius: radii.md, overflow: "hidden" },
   bar: { width: "100%", backgroundColor: colors.brand[600] },
   barLabel: { ...typography.caption, color: colors.ink[500] },
   barValue: { ...typography.caption, color: colors.ink[600], textAlign: "center" },
   metric: { flexDirection: "row", alignItems: "center", gap: spacing[3] },
+  metricCompact: { alignItems: "flex-start" },
   flex: { flex: 1 },
   rate: { fontSize: 24, fontWeight: "800", color: colors.brand[700] },
   breakdown: { gap: spacing[4] },

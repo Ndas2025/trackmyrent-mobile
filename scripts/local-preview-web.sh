@@ -52,6 +52,7 @@ mkdir -p "$HOME" "$EXPO_HOME" "$PNPM_HOME" "$npm_config_store_dir"
 cd "$APP_DIR"
 
 pnpm install --node-linker=hoisted >/dev/null
+rm -rf "$ROOT_DIR/output/web-preview"
 pnpm exec expo export --platform web --output-dir "$ROOT_DIR/output/web-preview"
 
 cd "$ROOT_DIR/output/web-preview"

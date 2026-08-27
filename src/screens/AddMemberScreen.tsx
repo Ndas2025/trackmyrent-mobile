@@ -4,13 +4,13 @@ import { useEffect, useMemo, useState } from "react";
 import { Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { Button, Card, TextField } from "../components/ui";
 import { SyncStatusCard } from "../components/SyncStatusCard";
+import { useFinance } from "../data/FinanceContext";
 import { useMembers } from "../data/MembersContext";
 import { useOnboarding, type OnboardingCategory } from "../data/OnboardingContext";
 import { colors, radii, spacing, typography } from "../design";
 import type { RootStackParamList } from "../navigation/types";
 
 type Props = NativeStackScreenProps<RootStackParamList, "AddMember">;
-type PlanOption = { id: string; title: string; helper: string; rent: number };
 type CustomField = { id: string; label: string; value: string };
 
 type FormState = {
@@ -27,41 +27,17 @@ type FormState = {
   customFields: CustomField[];
 };
 
-const planCatalog: Record<Exclude<OnboardingCategory, "Others">, PlanOption[]> = {
-  Gym: [
-    { id: "cardio", title: "Cardio workout", helper: "Energy and endurance training", rent: 1500 },
-    { id: "basic-fitness", title: "Basic fitness", helper: "General workout support", rent: 2000 },
-    { id: "strength", title: "Strength training", helper: "Power and conditioning", rent: 2500 }
-  ],
-  "Tution centre": [
-    { id: "crash", title: "Crash course", helper: "Short-term study plan", rent: 3000 },
-    { id: "regular", title: "Regular batch", helper: "Weekly academic coaching", rent: 2500 },
-    { id: "entrance", title: "Entrance prep", helper: "Exam-focused preparation", rent: 3500 }
-  ],
-  "Building rent": [
-    { id: "standard-shop", title: "Standard Shop", helper: "Mainline retail unit", rent: 18500 },
-    { id: "premium-corner", title: "Premium Corner", helper: "Corner space with better visibility", rent: 27500 },
-    { id: "storage-unit", title: "Storage Unit", helper: "Compact utility space", rent: 12000 }
-  ],
-  "Hostal/PG": [
-    { id: "single", title: "Single room", helper: "Private stay", rent: 8000 },
-    { id: "double", title: "Double sharing", helper: "Shared room for two", rent: 6000 },
-    { id: "triple", title: "3 sharing", helper: "Budget shared room", rent: 4500 }
-  ]
-};
-
 function createInitialForm(category: OnboardingCategory): FormState {
-  const firstPlan = category === "Others" ? null : planCatalog[category][0];
   return {
     name: "",
     phone: "",
-    planId: firstPlan?.id ?? "",
+    planId: "",
     businessName: "",
     unit: "",
     batch: "",
     roomType: "",
     groupName: "",
-    monthlyRent: firstPlan ? String(firstPlan.rent) : "",
+    monthlyRent: "",
     dueDay: "5",
     customFields: category === "Others" ? [{ id: `${Date.now()}-field`, label: "", value: "" }] : []
   };
@@ -69,9 +45,11 @@ function createInitialForm(category: OnboardingCategory): FormState {
 
 export function AddMemberScreen({ navigation }: Props) {
   const { addMember, errorMessage, clearError } = useMembers();
+  const { plans } = useFinance();
   const { category } = useOnboarding();
   const activeCategory = category ?? "Building rent";
-  const planOptions = activeCategory === "Others" ? [] : planCatalog[activeCategory];
+  const planOptions = useMemo(() => plans.filter((plan) => plan.active), [plans]);
+  const hasPlanOptions = activeCategory !== "Others" && planOptions.length > 0;
 
   const [form, setForm] = useState<FormState>(() => createInitialForm(activeCategory));
   const [submitted, setSubmitted] = useState(false);
@@ -85,15 +63,15 @@ export function AddMemberScreen({ navigation }: Props) {
   const set = (key: keyof FormState) => (value: string) => setForm((current) => ({ ...current, [key]: value }));
 
   const selectedPlan = useMemo(
-    () => planOptions.find((option) => option.id === form.planId) ?? planOptions[0] ?? null,
+    () => planOptions.find((option) => option.id === form.planId) ?? null,
     [form.planId, planOptions]
   );
 
-  const selectPlan = (plan: PlanOption) => {
+  const selectPlan = (plan: (typeof planOptions)[number]) => {
     setForm((current) => ({
       ...current,
       planId: plan.id,
-      monthlyRent: String(plan.rent)
+      monthlyRent: String(plan.amount)
     }));
   };
 
@@ -154,7 +132,7 @@ export function AddMemberScreen({ navigation }: Props) {
         ? form.businessName.trim()
         : activeCategory === "Others"
           ? form.groupName.trim() || "Custom group"
-          : plan?.title ?? activeCategory;
+          : plan?.name ?? activeCategory;
     const unit =
       activeCategory === "Building rent"
         ? form.unit.trim()
@@ -173,7 +151,7 @@ export function AddMemberScreen({ navigation }: Props) {
         category: activeCategory,
         name: form.name.trim(),
         business: businessName,
-        planName: plan?.title ?? undefined,
+        planName: plan?.name ?? undefined,
         phone: form.phone.trim(),
         unit,
         batch: activeCategory === "Gym" || activeCategory === "Tution centre" ? form.batch.trim() : undefined,
@@ -264,46 +242,50 @@ export function AddMemberScreen({ navigation }: Props) {
                   <Text style={styles.section}>
                     {activeCategory === "Building rent" ? "Rental details" : activeCategory === "Gym" ? "Workout details" : activeCategory === "Hostal/PG" ? "Hostel details" : "Class details"}
                   </Text>
-                  <Text style={styles.helper}>
-                    {activeCategory === "Building rent"
-                      ? "Pick a rent template, then fill the shop details."
-                      : activeCategory === "Gym"
-                        ? "Pick a workout plan and the training batch."
-                      : activeCategory === "Hostal/PG"
-                          ? "Pick a room plan and room type."
-                          : "Pick a class plan and the batch."}
-                  </Text>
+                  {hasPlanOptions ? (
+                    <Text style={styles.helper}>
+                      {activeCategory === "Building rent"
+                        ? "Pick a saved plan, then fill the shop details."
+                        : activeCategory === "Gym"
+                          ? "Pick a saved plan and the training batch."
+                          : activeCategory === "Hostal/PG"
+                            ? "Pick a saved plan and room type."
+                            : "Pick a saved plan and the batch."}
+                    </Text>
+                  ) : null}
                 </View>
               </View>
 
-              <View style={styles.planGrid}>
-                {planOptions.map((plan) => {
-                  const active = plan.id === form.planId;
-                  return (
-                    <Pressable
-                      key={plan.id}
-                      accessibilityRole="button"
-                      accessibilityState={{ selected: active }}
-                      onPress={() => selectPlan(plan)}
-                      style={({ pressed }) => [styles.planCard, active && styles.planCardActive, pressed && styles.planPressed]}
-                    >
-                      <View style={styles.planTop}>
-                        <View style={[styles.planIcon, active && styles.planIconActive]}>
-                          <Sparkles size={16} color={active ? colors.brand[700] : colors.ink[500]} />
+              {hasPlanOptions ? (
+                <View style={styles.planGrid}>
+                  {planOptions.map((plan) => {
+                    const active = plan.id === form.planId;
+                    return (
+                      <Pressable
+                        key={plan.id}
+                        accessibilityRole="button"
+                        accessibilityState={{ selected: active }}
+                        onPress={() => selectPlan(plan)}
+                        style={({ pressed }) => [styles.planCard, active && styles.planCardActive, pressed && styles.planPressed]}
+                      >
+                        <View style={styles.planTop}>
+                          <View style={[styles.planIcon, active && styles.planIconActive]}>
+                            <Sparkles size={16} color={active ? colors.brand[700] : colors.ink[500]} />
+                          </View>
+                          <View style={styles.planCopy}>
+                            <Text style={styles.planTitle}>{plan.name}</Text>
+                            <Text style={styles.planHelper}>{plan.billingCycle} billing</Text>
+                          </View>
                         </View>
-                        <View style={styles.planCopy}>
-                          <Text style={styles.planTitle}>{plan.title}</Text>
-                          <Text style={styles.planHelper}>{plan.helper}</Text>
+                        <View style={styles.planBottom}>
+                          <Text style={styles.planPrice}>₹{plan.amount.toLocaleString("en-IN")}</Text>
+                          <Text style={styles.planMeta}>{active ? "Selected" : "Tap to select"}</Text>
                         </View>
-                      </View>
-                      <View style={styles.planBottom}>
-                        <Text style={styles.planPrice}>₹{plan.rent.toLocaleString("en-IN")}</Text>
-                        <Text style={styles.planMeta}>{active ? "Selected" : "Tap to select"}</Text>
-                      </View>
-                    </Pressable>
-                  );
-                })}
-              </View>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+              ) : null}
 
               {activeCategory === "Building rent" ? (
                 <>
@@ -324,7 +306,7 @@ export function AddMemberScreen({ navigation }: Props) {
                 onChangeText={set("monthlyRent")}
                 keyboardType="numeric"
                 placeholder="₹ 0"
-                helperText={selectedPlan ? `Auto-filled from ${selectedPlan.title}. You can edit it.` : "Enter the monthly amount for this member."}
+                helperText={selectedPlan ? `Auto-filled from ${selectedPlan.name}. You can edit it.` : "Enter the monthly amount for this member."}
                 errorText={errors.monthlyRent}
               />
               <TextField

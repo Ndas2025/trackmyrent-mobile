@@ -2,7 +2,7 @@ import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { ChevronRight, ReceiptText } from "lucide-react-native";
 import { useMemo, useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from "react-native";
 import { AppHeader } from "../components/AppHeader";
 import { PeriodPicker } from "../components/PeriodPicker";
 import { Badge, Button, Card } from "../components/ui";
@@ -13,6 +13,8 @@ import type { RootStackParamList } from "../navigation/types";
 import { isDateInMonthYear, monthNames } from "../utils/date";
 
 export function ExpensesScreen() {
+  const { width } = useWindowDimensions();
+  const isCompact = width < 380;
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { expenses } = useFinance();
   const now = new Date();
@@ -29,9 +31,9 @@ export function ExpensesScreen() {
     <View style={styles.screen}>
       <AppHeader onPremiumPress={() => navigation.navigate("Premium")} onProfilePress={() => navigation.navigate("Profile")} />
       <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
-        <View style={styles.pageHero}>
+        <View style={[styles.pageHero, isCompact && styles.pageHeroCompact]}>
           <Text style={styles.pageTitle}>Expense</Text>
-          <Button onPress={() => navigation.navigate("AddExpense")} style={styles.addButton}>
+          <Button size="sm" onPress={() => navigation.navigate("AddExpense")}>
             Add expense
           </Button>
         </View>
@@ -108,12 +110,10 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     gap: spacing[3]
   },
-  pageTitle: { fontSize: 18, lineHeight: 24, fontWeight: "800", color: colors.ink[900] },
-  addButton: {
-    minHeight: 48,
-    borderRadius: radii.md,
-    paddingHorizontal: spacing[4]
+  pageHeroCompact: {
+    alignItems: "stretch"
   },
+  pageTitle: { fontSize: 18, lineHeight: 24, fontWeight: "800", color: colors.ink[900] },
   summary: { gap: spacing[1] },
   marker: { width: 28, height: 4, borderRadius: 999, backgroundColor: colors.accent.amber },
   summaryLabel: { ...typography.caption, color: colors.ink[500], textTransform: "uppercase" },

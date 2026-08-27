@@ -73,7 +73,7 @@ export function AddPlanScreen({ navigation }: Props) {
               label="Plan name"
               value={form.name}
               onChangeText={set("name")}
-              placeholder="e.g. Standard Shop"
+              placeholder="Enter plan name"
               errorText={errors.name}
             />
             <TextField

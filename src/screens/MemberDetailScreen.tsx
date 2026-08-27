@@ -1,6 +1,6 @@
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { CalendarDays, MapPin, Phone, Sparkles, Store } from "lucide-react-native";
-import { ScrollView, StyleSheet, Text, View } from "react-native";
+import { Alert, Linking, ScrollView, StyleSheet, Text, useWindowDimensions, View } from "react-native";
 import { Badge, Button, Card } from "../components/ui";
 import { useFinance } from "../data/FinanceContext";
 import { useMembers } from "../data/MembersContext";
@@ -9,7 +9,24 @@ import { colors, radii, spacing, typography } from "../design";
 import type { RootStackParamList } from "../navigation/types";
 
 type Props = NativeStackScreenProps<RootStackParamList, "MemberDetail">;
+
+function formatWhatsappPhone(phone: string) {
+  const digitsOnly = phone.replace(/\D/g, "");
+  if (!digitsOnly) return "";
+  if (digitsOnly.length === 10) return `91${digitsOnly}`;
+  return digitsOnly;
+}
+
+function formatDueDay(day: number) {
+  if (day === 1 || day === 21 || day === 31) return `${day}st`;
+  if (day === 2 || day === 22) return `${day}nd`;
+  if (day === 3 || day === 23) return `${day}rd`;
+  return `${day}th`;
+}
+
 export function MemberDetailScreen({ route }: Props) {
+  const { width } = useWindowDimensions();
+  const isCompact = width < 380;
   const { members, markPaid, markUnpaid } = useMembers();
   const { payments } = useFinance();
   const member = members.find((item) => item.id === route.params.memberId);
@@ -19,6 +36,28 @@ export function MemberDetailScreen({ route }: Props) {
   const isPaid = member.balance <= 0 || member.status === "Paid";
   const tone = isPaid ? "paid" : "unpaid";
   const recentPayments = payments.filter((payment) => payment.memberId === member.id).slice(0, 3);
+  const dueLabel = `${formatDueDay(member.dueDay)} of every month`;
+
+  const sendReminder = async () => {
+    const phone = formatWhatsappPhone(member.phone);
+    if (!phone) {
+      Alert.alert("Phone missing", "Add a valid phone number before sending a reminder.");
+      return;
+    }
+
+    const amountDue = member.balance > 0 ? member.balance : member.monthlyRent;
+    const message = `Hi ${member.name}, this is a reminder that your payment of ${formatCurrency(amountDue)} is due on ${dueLabel}. Please complete it when possible. Thank you.`;
+    const encodedMessage = encodeURIComponent(message);
+    const appUrl = `whatsapp://send?phone=${phone}&text=${encodedMessage}`;
+    const webUrl = `https://wa.me/${phone}?text=${encodedMessage}`;
+
+    try {
+      const canOpenWhatsapp = await Linking.canOpenURL(appUrl);
+      await Linking.openURL(canOpenWhatsapp ? appUrl : webUrl);
+    } catch {
+      Alert.alert("WhatsApp unavailable", "We couldn't open WhatsApp on this device.");
+    }
+  };
 
   return (
     <View style={styles.screen}>
@@ -32,7 +71,7 @@ export function MemberDetailScreen({ route }: Props) {
           </View>
         </Card>
 
-        <View style={styles.amounts}>
+        <View style={[styles.amounts, isCompact && styles.stackRow]}>
           <Card style={styles.amountCard}>
             <Text style={styles.label}>MONTHLY RENT</Text>
             <Text style={styles.amount}>{formatCurrency(member.monthlyRent)}</Text>
@@ -54,7 +93,7 @@ export function MemberDetailScreen({ route }: Props) {
           {member.groupName ? <Detail icon={Sparkles} label="Group" value={member.groupName} /> : null}
           {member.customFields?.length ? <Detail icon={Sparkles} label="Custom fields" value={member.customFields.map((field) => `${field.label}: ${field.value}`).join(" · ")} /> : null}
           <Detail icon={Phone} label="Phone" value={member.phone} />
-          <Detail icon={CalendarDays} label="Payment due" value={`${member.dueDay}${member.dueDay === 1 ? "st" : "th"} of every month`} />
+          <Detail icon={CalendarDays} label="Payment due" value={dueLabel} />
         </Card>
 
         <View>
@@ -62,7 +101,7 @@ export function MemberDetailScreen({ route }: Props) {
           <View style={styles.paymentList}>
             {recentPayments.length ? (
               recentPayments.map((payment) => (
-                <Card key={payment.id} style={styles.payment}>
+                <Card key={payment.id} style={[styles.payment, isCompact && styles.paymentCompact]}>
                   <View>
                     <Text style={styles.paymentTitle}>{payment.date}</Text>
                     <Text style={styles.muted}>{payment.method}</Text>
@@ -82,7 +121,7 @@ export function MemberDetailScreen({ route }: Props) {
       </ScrollView>
 
       <View style={styles.footer}>
-        <View style={styles.footerRow}>
+        <View style={[styles.footerRow, isCompact && styles.footerRowCompact]}>
           <View style={styles.footerPrimary}>
             {isPaid ? (
               <Button fullWidth onPress={() => markUnpaid(member.id)}>
@@ -95,7 +134,7 @@ export function MemberDetailScreen({ route }: Props) {
             )}
           </View>
           <View style={styles.footerSecondary}>
-            <Button fullWidth variant="secondary" onPress={() => {}}>
+            <Button fullWidth variant="secondary" onPress={sendReminder}>
               Send reminder
             </Button>
           </View>
@@ -129,6 +168,7 @@ const styles = StyleSheet.create({
   name: { ...typography.sectionTitle, color: colors.ink[900] },
   category: { ...typography.caption, color: colors.ink[500], textTransform: "capitalize" },
   amounts: { flexDirection: "row", gap: spacing[3] },
+  stackRow: { flexDirection: "column" },
   amountCard: { flex: 1, minWidth: 0, gap: spacing[1] },
   label: { ...typography.caption, color: colors.ink[500] },
   amount: { fontSize: 21, lineHeight: 28, fontWeight: "800", color: colors.ink[900] },
@@ -140,6 +180,7 @@ const styles = StyleSheet.create({
   detailValue: { ...typography.body, color: colors.ink[800] },
   paymentList: { gap: spacing[3] },
   payment: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
+  paymentCompact: { alignItems: "flex-start", gap: spacing[2] },
   paymentEmpty: { alignItems: "center", justifyContent: "center", minHeight: 72 },
   paymentTitle: { ...typography.label, color: colors.ink[800] },
   muted: { ...typography.caption, color: colors.ink[500] },
@@ -154,6 +195,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface.app
   },
   footerRow: { flexDirection: "row", gap: spacing[2] },
+  footerRowCompact: { flexDirection: "column" },
   footerPrimary: { flex: 1 },
   footerSecondary: { flex: 1 }
 });

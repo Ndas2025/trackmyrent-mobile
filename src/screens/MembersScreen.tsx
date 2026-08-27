@@ -2,7 +2,7 @@ import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { Plus, Search, Users } from "lucide-react-native";
 import { useMemo, useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import { Pressable, ScrollView, StyleSheet, Text, TextInput, useWindowDimensions, View } from "react-native";
 import { SyncStatusCard } from "../components/SyncStatusCard";
 import { MemberRow } from "../components/MemberRow";
 import { Card, SummaryCard } from "../components/ui";
@@ -13,6 +13,8 @@ import type { RootStackParamList } from "../navigation/types";
 const filters = ["All", "Paid", "Pending", "Overdue"] as const;
 
 export function MembersScreen() {
+  const { width } = useWindowDimensions();
+  const isCompact = width < 380;
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<(typeof filters)[number]>("All");
   const { members, status, errorMessage } = useMembers();
@@ -30,7 +32,7 @@ export function MembersScreen() {
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
       <Card style={styles.hero}>
-        <View style={styles.heroTop}>
+        <View style={[styles.heroTop, isCompact && styles.heroTopCompact]}>
           <View style={styles.heroText}>
             <Text style={styles.eyebrow}>MEMBER DIRECTORY</Text>
             <Text style={styles.title}>Members</Text>
@@ -61,13 +63,13 @@ export function MembersScreen() {
       {status === "loading" ? <SyncStatusCard title="Loading members" message="We are refreshing the member list for this account." /> : null}
       {errorMessage ? <SyncStatusCard title="Member sync problem" message={errorMessage} tone="error" /> : null}
 
-      <View style={styles.grid}>
+      <View style={[styles.grid, isCompact && styles.gridCompact]}>
         <SummaryCard label="All members" value={`${members.length}`} detail="Active profiles" />
         <SummaryCard label="Paid" value={`${members.filter((member) => member.status === "Paid").length}`} detail="Closed this cycle" accent="brand" />
         <SummaryCard label="Needs attention" value={`${members.filter((member) => member.status !== "Paid").length}`} detail="Pending or overdue" accent="red" />
       </View>
 
-      <View style={styles.listHeader}>
+      <View style={[styles.listHeader, isCompact && styles.listHeaderCompact]}>
         <Text style={styles.count}>{filtered.length} {filtered.length === 1 ? "member" : "members"}</Text>
         <View style={styles.listBadge}>
           <Users size={16} color={colors.brand[700]} />
@@ -98,6 +100,7 @@ const styles = StyleSheet.create({
   content: { padding: spacing[4], gap: spacing[4], paddingBottom: 128 },
   hero: { gap: spacing[4] },
   heroTop: { flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between", gap: spacing[3] },
+  heroTopCompact: { alignItems: "stretch" },
   heroText: { flex: 1, gap: spacing[2] },
   eyebrow: { ...typography.caption, color: colors.brand[700] },
   title: { ...typography.title, color: colors.ink[900] },
@@ -112,7 +115,9 @@ const styles = StyleSheet.create({
   chipLabel: { ...typography.caption, color: colors.ink[600] },
   chipLabelActive: { color: colors.brand[700] },
   grid: { flexDirection: "row", flexWrap: "wrap", gap: spacing[3] },
+  gridCompact: { flexDirection: "column" },
   listHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: spacing[3] },
+  listHeaderCompact: { alignItems: "flex-start" },
   count: { ...typography.caption, color: colors.ink[500] },
   listBadge: { flexDirection: "row", alignItems: "center", gap: spacing[2], paddingHorizontal: spacing[3], paddingVertical: spacing[2], borderRadius: radii.pill, backgroundColor: colors.brand[50] },
   listBadgeText: { ...typography.caption, color: colors.brand[700] },

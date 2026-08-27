@@ -1,6 +1,6 @@
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useEffect, useMemo, useState } from "react";
-import { Alert, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Alert, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from "react-native";
 import { BillingCyclePicker } from "../components/BillingCyclePicker";
 import { Badge, Button, Card, TextField } from "../components/ui";
 import { PlanMemberPicker } from "../components/PlanMemberPicker";
@@ -14,6 +14,8 @@ import type { RootStackParamList } from "../navigation/types";
 type Props = NativeStackScreenProps<RootStackParamList, "PlanDetail">;
 
 export function PlanDetailScreen({ route, navigation }: Props) {
+  const { width } = useWindowDimensions();
+  const isCompact = width < 380;
   const { plans, updatePlan, deletePlan, errorMessage, clearError } = useFinance();
   const { members } = useMembers();
   const plan = plans.find((item) => item.id === route.params.planId);
@@ -114,12 +116,12 @@ export function PlanDetailScreen({ route, navigation }: Props) {
     <KeyboardAvoidingView style={styles.screen} behavior={Platform.OS === "ios" ? "padding" : undefined}>
       <View style={styles.page}>
         <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-          <Card style={styles.summary}>
+          <Card style={[styles.summary, isCompact && styles.summaryCompact]}>
             <View style={styles.icon}>
               <Text style={styles.iconText}>{plan.name.slice(0, 1).toUpperCase()}</Text>
             </View>
             <View style={styles.summaryCopy}>
-              <View style={styles.summaryTop}>
+              <View style={[styles.summaryTop, isCompact && styles.summaryTopCompact]}>
                 <View style={styles.summaryTitleWrap}>
                   <Text style={styles.title}>{plan.name}</Text>
                   <Badge label={plan.active ? "Active" : "Inactive"} tone={plan.active ? "paid" : "neutral"} />
@@ -151,7 +153,7 @@ export function PlanDetailScreen({ route, navigation }: Props) {
         </ScrollView>
 
         <View style={styles.footer}>
-          <View style={styles.footerRow}>
+          <View style={[styles.footerRow, isCompact && styles.footerRowCompact]}>
             <View style={styles.footerDelete}>
               <Button fullWidth variant="danger" onPress={confirmDelete}>
                 {deleting ? "Deleting..." : "Delete"}
@@ -172,7 +174,7 @@ export function PlanDetailScreen({ route, navigation }: Props) {
           <View style={styles.modalCard}>
             <Text style={styles.modalTitle}>Do you really want to delete this plan?</Text>
             <Text style={styles.modalText}>This will remove the plan from your pricing list.</Text>
-            <View style={styles.modalActions}>
+            <View style={[styles.modalActions, isCompact && styles.modalActionsCompact]}>
               <View style={styles.modalSecondary}>
                 <Button variant="secondary" fullWidth onPress={() => setConfirmVisible(false)}>
                   Cancel
@@ -198,6 +200,7 @@ const styles = StyleSheet.create({
   center: { flex: 1, alignItems: "center", justifyContent: "center" },
   muted: { ...typography.body, color: colors.ink[500] },
   summary: { flexDirection: "row", gap: spacing[3], alignItems: "flex-start" },
+  summaryCompact: { flexDirection: "column" },
   icon: {
     width: 52,
     height: 52,
@@ -210,6 +213,7 @@ const styles = StyleSheet.create({
   iconText: { fontSize: 18, fontWeight: "800", color: colors.brand[700] },
   summaryCopy: { flex: 1, gap: spacing[1] },
   summaryTop: { flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between", gap: spacing[3] },
+  summaryTopCompact: { flexDirection: "column", alignItems: "flex-start" },
   summaryTitleWrap: { flex: 1, gap: spacing[1] },
   title: { ...typography.sectionTitle, color: colors.ink[900] },
   subtitle: { ...typography.body, color: colors.ink[600] },
@@ -229,6 +233,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface.app
   },
   footerRow: { flexDirection: "row", gap: spacing[2] },
+  footerRowCompact: { flexDirection: "column" },
   footerDelete: { flex: 1 },
   footerSave: { flex: 1 },
   modalBackdrop: {
@@ -249,6 +254,7 @@ const styles = StyleSheet.create({
   modalTitle: { ...typography.sectionTitle, color: colors.ink[900] },
   modalText: { ...typography.body, color: colors.ink[600] },
   modalActions: { flexDirection: "row", gap: spacing[2] },
+  modalActionsCompact: { flexDirection: "column" },
   modalSecondary: { flex: 1 },
   modalPrimary: { flex: 1 }
 });
