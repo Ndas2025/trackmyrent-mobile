@@ -64,8 +64,6 @@ export function AddExpenseScreen({ navigation }: Props) {
             {errorMessage ? <SyncStatusCard title="Sync problem" message={errorMessage} tone="error" /> : null}
             <TextField label="Description" value={form.title} onChangeText={set("title")} placeholder="e.g. Lift maintenance" errorText={errors.title} />
             <TextField label="Category" value={form.category} onChangeText={set("category")} placeholder="e.g. Maintenance" errorText={errors.category} />
-            <TextField label="Amount" value={form.amount} onChangeText={set("amount")} keyboardType="numeric" placeholder="₹ 0" errorText={errors.amount} />
-
             <View style={styles.segmentBlock}>
               <Text style={styles.segmentLabel}>Recurrence</Text>
               <View style={[styles.segmentRow, isCompact && styles.segmentRowCompact]}>
@@ -84,6 +82,7 @@ export function AddExpenseScreen({ navigation }: Props) {
                 })}
               </View>
             </View>
+            <TextField label="Amount" value={form.amount} onChangeText={set("amount")} keyboardType="numeric" placeholder="₹ 0" errorText={errors.amount} />
           </Card>
         </ScrollView>
 
